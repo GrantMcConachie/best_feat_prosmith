@@ -538,7 +538,8 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
                         best_mse = mse
                         best_i, best_j, best_k = i, j, k
         
-
+    # saving best proportion
+    pkl.dump((best_i, best_j, best_k), open(os.path.join(log_dir, 'xgboost', 'val_proportion.pkl'), 'wb'))
 
     y_test_pred = best_i*y_test_pred_all_cls + best_j*y_test_pred_all + best_k*y_test_pred_cls
     logger.info("Three models combined:")

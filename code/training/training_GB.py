@@ -125,13 +125,6 @@ args = get_arguments()
 
 n_gpus = len(list(range(torch.cuda.device_count())))
 
-setting = args.log_name + '_gpus' + str(n_gpus) +'_layers' + str(args.num_hidden_layers) +'_xgboost_training'
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-fhandler = logging.FileHandler(filename= setting +'.txt', mode='a')
-logger.addHandler(fhandler)
-
 
 ###########################################################################
 
@@ -291,16 +284,13 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
 
     if os.path.exists(pretrained_model) and pretrained_model != "":
         logger.info(f"Loading model")
+        state_dict = torch.load(pretrained_model)
+        new_model_state_dict = model.state_dict()
         try:
-            state_dict = torch.load(pretrained_model)
-            new_model_state_dict = model.state_dict()
             for key in new_model_state_dict.keys():
-                if key in state_dict.keys():
-                    try:
-                        new_model_state_dict[key].copy_(state_dict[key])
-                        #logging.info("Updatete key: %s" % key)
-                    except:
-                        None
+                new_model_state_dict[key].copy_(state_dict[key])
+                logger.info("Updatete key: %s" % key)
+
             model.load_state_dict(new_model_state_dict)
             logger.info("Successfully loaded pretrained model")
         except:
@@ -322,9 +312,20 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
     
     logger.info(f"Extraction complete")
     
-    def get_predictions(param, dM_train, dM_val):
+    def get_predictions(param, dM_train, dM_val, model_path=''):
         param, num_round, dM_train = set_param_values_V2(param = param, dtrain = dM_train)
         bst = xgb.train(param,  dM_train, num_round)
+
+        # saving xgboost params
+        if model_path == '':
+            pass
+        else:
+            if os.path.isdir(os.path.dirname(model_path)):
+                bst.save_model(model_path)
+            else:
+                os.mkdir(os.path.dirname(model_path))
+                bst.save_model(model_path)
+
         y_val_pred = bst.predict(dM_val)
         return(y_val_pred)
         
@@ -448,7 +449,7 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
     y_val_pred_all = get_predictions(param = trials.argmin, dM_train = dtrain, dM_val = dvalid)
     get_performance_metrics(pred = y_val_pred_all, true = val_labels)
     logger.info("Test set:")
-    y_test_pred_all = get_predictions(param = trials.argmin, dM_train = dtrain_val, dM_val = dtest)
+    y_test_pred_all = get_predictions(param = trials.argmin, dM_train = dtrain_val, dM_val = dtest, model_path=os.path.join(log_dir, 'xgboost', 'embs_only.pkl'))
     get_performance_metrics(pred = y_test_pred_all, true = test_labels)
     
     
@@ -482,7 +483,7 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
     y_val_pred_all_cls = get_predictions(param = trials.argmin, dM_train = dtrain_all_cls, dM_val = dvalid_all_cls)
     get_performance_metrics(pred = y_val_pred_all_cls, true = val_labels)
     logger.info("Test set:")
-    y_test_pred_all_cls = get_predictions(param  = trials.argmin, dM_train = dtrain_val_all_cls, dM_val = dtest_all_cls)
+    y_test_pred_all_cls = get_predictions(param  = trials.argmin, dM_train = dtrain_val_all_cls, dM_val = dtest_all_cls, model_path=os.path.join(log_dir, 'xgboost', 'embs_and_cls.pkl'))
     get_performance_metrics(pred = y_test_pred_all_cls, true = test_labels)
 
 
@@ -513,7 +514,7 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
     y_val_pred_cls = get_predictions(param = trials.argmin, dM_train = dtrain_cls, dM_val = dvalid_cls)
     get_performance_metrics(pred = y_val_pred_cls, true = val_labels)
     logger.info("Test set:")
-    y_test_pred_cls = get_predictions(param = trials.argmin, dM_train = dtrain_val_cls, dM_val = dtest_cls)
+    y_test_pred_cls = get_predictions(param = trials.argmin, dM_train = dtrain_val_cls, dM_val = dtest_cls, model_path=os.path.join(log_dir, 'xgboost', 'cls.pkl'))
     get_performance_metrics(pred = y_test_pred_cls, true = test_labels)
 
 
@@ -547,7 +548,7 @@ def trainer(gpu, args, device, par_dir, split, end_pth):
     
 
     ###Save model predictions:
-    save_pred_path = os.path.join(os.basedir(par_dir), 'predictions', split)
+    save_pred_path = os.path.join(os.path.dirname(par_dir), 'predictions', split)
     if save_pred_path != "":
         try:
             os.mkdir(save_pred_path)

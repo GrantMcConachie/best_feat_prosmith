@@ -7,25 +7,20 @@
 #$ -m ea
 
 # Give job a name
-#$ -N CC_CATS_GB
+#$ -N M2OR_CONTEXTPRED_GB
 
 # Combine output and error files into a single file
 #$ -j y
 
 # Specify dir for output files
-#$ -o /projectnb/depaqlab/Grant/ProSmith_scc/CC_and_HC/bash_output
+#$ -o /projectnb/depaqlab/Grant/Prosmith_refactor/results/M2OR/bash_output
 
 # give it 12 hours to run per core/node
 #$ -l h_rt=48:00:00
 
 # requesting gpus:
 #$ -l gpus=1
-#$ -l gpu_c=6.0
-
-# set torch home stuff to avoid anything dumb w cache stuff in my home dir:
-HF_HOME=/projectnb/depaqlab/emily/prosmith/github/downhome
-TORCH_HOME=/projectnb/depaqlab/emily/prosmith/github/downhome
-
+#$ -l gpu_c=3.7
 
 # Keep track of information related to the current job
 echo "=========================================================="
@@ -40,4 +35,4 @@ module load miniconda
 conda activate prosmith
 
 # run the Python function
-python /projectnb/depaqlab/Grant/Prosmith_refactor/code/training/training_GB.py --train_dir /projectnb/depaqlab/Grant/Prosmith_refactor/data/CC/rand_splits --embed_path /projectnb/depaqlab/Grant/Prosmith_refactor/data/CC/embeddings/featurized_mols/CATS.pkl --num_iter 500 --log_name CC_CATS_GB --binary_task False
+python /projectnb/depaqlab/Grant/Prosmith_refactor/code/training/training_GB.py --train_dir /projectnb/depaqlab/Grant/Prosmith_refactor/data/M2OR/rand_splits --embed_path /projectnb/depaqlab/Grant/Prosmith_refactor/data/M2OR/embeddings/featurized_mols/gin_supervised_contextpred.pkl --num_iter 500 --log_name M2OR_CONTEXTPRED_GB --binary_task True
